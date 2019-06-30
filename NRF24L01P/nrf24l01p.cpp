@@ -8,7 +8,7 @@
 #define CE_LOW    digitalWrite(ce_pin,LOW);
 #define CSN_HIGH  digitalWrite(csn_pin,HIGH);
 #define CSN_LOW   digitalWrite(csn_pin,LOW);
-#define INIT_SPI  SPI.beginTransaction(SPISettings(4000000,MSBFIRST,SPI_MODE0));
+#define INIT_SPI  SPI.beginTransaction(SPISettings(1000000,MSBFIRST,SPI_MODE0));
 #define START_SPI SPI.begin();
 
 
@@ -17,7 +17,10 @@
 #define RX 1
 #define TX 0
 
-#define CONFWORD (0<<MASK_RX_DR) | (0<<MASK_TX_DS) | (0<<MASK_MAX_RT) | (1<<EN_CRC) | (0<<CRCO) | (0<<PWR_UP) | (0<<PRIM_RX)
+#define CONFREG (0<<MASK_RX_DR) | (0<<MASK_TX_DS) | (0<<MASK_MAX_RT) | (1<<EN_CRC) | (0<<CRCO) | (0<<PWR_UP) | (0<<PRIM_RX)
+#define RF_DR_LOW  5
+#define RF_DR_HIGH 3
+#define RFREG   (1<<RF_DR_HIGH) | (0<<RF_DR_LOW) | (0x03<<RF_PWR)
 
 uint8_t regw,stat,fstat,conf;
 
@@ -60,7 +63,7 @@ void Nrfp::hardInit()
  *
  */
 
-void Nrfp::config()
+void Nrfp::config()           // power on minimal config
 {
   regWrite(RX_ADDR_P1,re_addr,ADDR_LENGTH);
   regWrite(RX_ADDR_P0,tr_addr,ADDR_LENGTH);
@@ -70,6 +73,8 @@ void Nrfp::config()
   regw=MAX_PAYLOAD_LENGTH;
   regWrite(RX_PW_P0,&regw,1);
   regWrite(RX_PW_P1,&regw,1);
+  regw=RFREG;
+  regWrite(RF_SETUP,&regw,1);
 
   pwrUpRx();
 
@@ -105,7 +110,7 @@ void Nrfp::pwrUpRx()
 {
     CE_LOW
 
-      conf=CONFWORD|(1<<PWR_UP)|(1<<PRIM_RX);       // powerUP, Rx
+      conf=CONFREG|(1<<PWR_UP)|(1<<PRIM_RX);       // powerUP, Rx
       regWrite(CONFIG,&conf,1);
 }
 
@@ -113,7 +118,7 @@ void Nrfp::pwrUpTx()
 {
     CE_LOW
 
-      conf=CONFWORD|(1<<PWR_UP)|(0<<PRIM_RX);       // powerUP, Tx
+      conf=CONFREG|(1<<PWR_UP)|(0<<PRIM_RX);       // powerUP, Tx
       regWrite(CONFIG,&conf,1);
 }
 

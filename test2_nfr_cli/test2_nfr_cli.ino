@@ -7,13 +7,15 @@ Nrfp nrfp;
 #define CE_PIN  9
 #define CSN_PIN 10
 
-#define RE_ADDR "nrf01" // "serv1"
-#define TR_ADDR "nrf02" // "peri1"
+//#define RE_ADDR "nrf01" // "serv1"
+//#define TR_ADDR "nrf02" // "peri1"
 
 unsigned long cnt=0;
 unsigned long cntko=0;
 unsigned long time_beg;
 unsigned long time_end;
+
+long readTo=0;
 
 byte message[MAX_PAYLOAD_LENGTH+1]={"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345"};
 
@@ -31,8 +33,8 @@ void setup() {
   nrfp.hardInit();
   
   nrfp.channel=1;
-  nrfp.re_addr="serv1";
-  nrfp.tr_addr="clie1";  
+  nrfp.re_addr=(byte*)"serv1";
+  nrfp.tr_addr=(byte*)"clie1";  
   nrfp.config();
 
   Serial.println("start");
@@ -40,12 +42,10 @@ void setup() {
 }
 
 void loop() {
-
-  unsigned long time_beg,time_end;
-  long readTo=0;
   
   cnt++;
-  sprintf(message,"%05d",cnt);message[strlen(message)]='*';
+  sprintf(message,"%05d",cnt);
+  message[strlen(message)]='*';
   time_beg = micros();
 
   nrfp.dataWrite(message);
@@ -71,6 +71,7 @@ void loop() {
     Serial.print((char*)message);Serial.print(" in:");
     Serial.print(time_end - time_beg); 
     Serial.println("us");
+    
   }
 
   delay(2000);

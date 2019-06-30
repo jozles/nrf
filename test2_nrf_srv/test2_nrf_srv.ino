@@ -7,8 +7,8 @@ Nrfp nrfp;
 #define CE_PIN  9
 #define CSN_PIN 10
 
-#define RE_ADDR "nrf02" // ^peri1"
-#define TR_ADDR "nrf01" // "serv1"
+//#define RE_ADDR "nrf02" // ^peri1"
+//#define TR_ADDR "nrf01" // "serv1"
 
 unsigned long cnt=0;
 unsigned long cntko=0;
@@ -31,8 +31,8 @@ void setup() {
   nrfp.hardInit();
   
   nrfp.channel=1;
-  nrfp.re_addr="clie1";
-  nrfp.tr_addr="serv1";  
+  nrfp.re_addr=(byte*)"clie1";
+  nrfp.tr_addr=(byte*)"serv1";  
   nrfp.config();
 
   Serial.println("start");
