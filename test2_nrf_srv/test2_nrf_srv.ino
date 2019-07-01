@@ -7,13 +7,23 @@ Nrfp nrfp;
 #define CE_PIN  9
 #define CSN_PIN 10
 
-//#define RE_ADDR "nrf02" // ^peri1"
-//#define TR_ADDR "nrf01" // "serv1"
+  /* périphérique */
+  // pipe 1   4 octets d'adresse du concentrateur + 1 octet n° de périphérique
+  // pipe 0   adresse de broadcast lorsque le périphérique est en PRX 
+  //          adresse du concentrateur lorsque le périphérique est en PTX
+  // la lib effectue les initialisations / commutations
+  
+  #define NRF_MODE 'P'     // mode périphérique pour configurer la lib
+  #define BR_ADDR  "bcast"
+  #define P1_ADDR  "C0011" // concentrateur 001 périph 1
+  #define TX_ADDR  "C0011" // idem P1 pour messages
 
 unsigned long cnt=0;
 unsigned long cntko=0;
 unsigned long time_beg;
 unsigned long time_end;
+uint8_t pipe;
+uint8_t pldLength;
 
 byte message[MAX_PAYLOAD_LENGTH+1]={"ABCDEFGHIJKLMNOPQRSTUVWXYZ012345"};
 
@@ -31,8 +41,12 @@ void setup() {
   nrfp.hardInit();
   
   nrfp.channel=1;
-  nrfp.re_addr=(byte*)"clie1";
-  nrfp.tr_addr=(byte*)"serv1";  
+
+  nrfp.mode=NRF_MODE;
+  nrfp.r1_addr=(byte*)P1_ADDR;  // pipe 1 pour réception commandes avec ACK
+  nrfp.tr_addr=(byte*)TX_ADDR;  // adresse serveur pour ce périphérique
+  nrfp.br_addr=(byte*)BR_ADDR;  // adresse commune de broadcast
+
   nrfp.config();
 
   Serial.println("start");
@@ -43,16 +57,21 @@ void loop() {
 
   while(!nrfp.available()){}
   
-  Serial.print("received ");
+  Serial.print("received ");delay(1000);
   
-  nrfp.dataRead(message);Serial.print((char*)message);
+  nrfp.dataRead(message,&pipe,&pldLength);
+  Serial.print((char*)message);
+  Serial.print("p/l:");
+  Serial.print(pipe);
+  Serial.print("/");
+  Serial.print(pldLength);
   
-  nrfp.dataWrite(message);
-
-  Serial.println(" transmit...");
+  if(pipe!=0){                              // sinon message de balise
+    nrfp.dataWrite(message,'A',pldLength);
+    Serial.println(" transmit...");
   
-  while(nrfp.transmitting()){}
-
+    while(nrfp.transmitting()){}
+  }
 } 
 
 

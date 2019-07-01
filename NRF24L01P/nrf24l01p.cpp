@@ -31,10 +31,11 @@ Nrfp::Nrfp()    // constructeur
 
 void Nrfp::hardInit()
 {
-  INIT_CE
   CE_LOW
-  INIT_CSN
+  INIT_CE
   CSN_HIGH
+  INIT_CSN
+
 
   INIT_SPI
   START_SPI
@@ -65,14 +66,24 @@ void Nrfp::hardInit()
 
 void Nrfp::config()           // power on minimal config
 {
-  regWrite(RX_ADDR_P1,re_addr,ADDR_LENGTH);
   regWrite(RX_ADDR_P0,tr_addr,ADDR_LENGTH);
+  regWrite(RX_ADDR_P1,r1_addr,ADDR_LENGTH);
+  if(mode=='C'){
+    regWrite((EN_AA),ENAA_P5|ENAA_P4|ENAA_P3|ENAA_P2|ENAA_P1|ENAA_P0,1);
+    regWrite((EN_RXADDR),ERX_P5|ERX_P4|ERX_P3|ERX_P2|ERX_P1|ERX_P0,1);
+    for(uint8_t i=1;i<ADDR_LENGTH;i++){
+      regWrite((RX_ADDR_P1+i),r1_addr[ADDR_LENGTH],1);
+    }
+  }
   regWrite(TX_ADDR,tr_addr,ADDR_LENGTH);
+
   if(channel==0){channel=DEF_CHANNEL;}
   regWrite(RF_CH,&channel,1);
   regw=MAX_PAYLOAD_LENGTH;
   regWrite(RX_PW_P0,&regw,1);
   regWrite(RX_PW_P1,&regw,1);
+  regw=(1<<EN_DYN_ACK);                // no ack enable
+  regWrite(FEATURE,&regw,1);
   regw=RFREG;
   regWrite(RF_SETUP,&regw,1);
 
@@ -124,6 +135,9 @@ void Nrfp::pwrUpTx()
 
 bool Nrfp::available()      // keep CE high when false
 {
+    if(mode=='P'){
+          regWrite(RX_ADDR_P0,br_addr,ADDR_LENGTH);
+    }
     CE_HIGH
     regRead(FIFO_STATUS,&fstat,1);
     if((fstat & (1<<RX_EMPTY))!=0){
@@ -137,18 +151,28 @@ bool Nrfp::available()      // keep CE high when false
     return true;  // dataRead should be done now
 }
 
-void Nrfp::dataRead(byte* data)
+void Nrfp::dataRead(byte* data,uint8_t* pipe,uint8_t* pldLength)
 {
-    CSN_LOW
-    SPI.transfer(R_RX_PAYLOAD);
-    SPI.transfer(data,MAX_PAYLOAD_LENGTH);
-    CSN_HIGH
+    regRead(STATUS,&stat,1);
+    *pipe=(stat>>RX_P_NO)&0x03;
 
+    regRead((RX_PW_P0+pipe),*pldLength,1);
+    if(*pldLength>MAX_PAYLOAD_LENGTH){
+        *pldLength=0;
+        flushRx();
+        memset(data,0x00,MAX_PAYLOAD_LENGTH);
+    }
+    else{
+        CSN_LOW
+        SPI.transfer(R_RX_PAYLOAD);
+        SPI.transfer(data,pldLength);
+        CSN_HIGH
+    }
     stat=(1<<RX_DR);
     regWrite(STATUS,&stat,1);     // clear RX_DR bit
 }
 
-void Nrfp::dataWrite(byte* data)
+void Nrfp::dataWrite(byte* data,char na,uint8_t len)
 {
     pwrUpTx();
 
@@ -158,8 +182,9 @@ void Nrfp::dataWrite(byte* data)
     regWrite(STATUS,&stat,1);     // clear TX_DS & MAX_RT bits
 
     CSN_LOW
-    SPI.transfer(W_TX_PAYLOAD);
-    for(int i=0;i<MAX_PAYLOAD_LENGTH;i++){SPI.transfer(data[i]);}
+    if(na=='A'){SPI.transfer(W_TX_PAYLOAD);}
+    else{       SPI.transfer(W_TX_PAYLOAD_NA);}
+    for(uint8_t i=0;i<len;i++){SPI.transfer(data[i]);}
     CSN_HIGH
 
     CE_HIGH                       // transmit

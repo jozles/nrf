@@ -22,16 +22,18 @@ class Nrfp
     bool available();
     void flushRx();
     void flushTx();
-    void dataRead(byte* data);
-    void dataWrite(byte* data);
+    void Nrfp::dataRead(byte* data,uint8_t* pipe,uint8_t* pldLength);
+    void dataWrite(byte* data,char na,uint8_t len);
 
     uint8_t  ce_pin;
     uint8_t  csn_pin;
 
     uint8_t channel;
 
-    byte* re_addr;
+    byte  mode;
+    byte* r1_addr;
     byte* tr_addr;
+    byte* br_addr;
 
 };
 
